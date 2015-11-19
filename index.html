@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="UTF-8">
+    <title>Machinelearning by mlhedberg</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+  </head>
+  <body>
+    <section class="page-header">
+      <h1 class="project-name">Machinelearning</h1>
+      <h2 class="project-tagline"></h2>
+      <a href="https://github.com/mlhedberg/MachineLearning" class="btn">View on GitHub</a>
+      <a href="https://github.com/mlhedberg/MachineLearning/zipball/master" class="btn">Download .zip</a>
+      <a href="https://github.com/mlhedberg/MachineLearning/tarball/master" class="btn">Download .tar.gz</a>
+    </section>
+
+    <section class="main-content">
+      <p></p>
+
+<p></p>
+
+<p>
+
+</p>
+
+<p></p>Wearable Device Prediction Assignment
+
+
+
+<p>
+</p>
+
+
+
+
+
+
+
+code{white-space: pre;}
+
+<p></p>
+
+
+
+
+  pre:not([class]) {
+    background-color: white;
+  }
+
+
+
+
+<p></p>
+
+<p></p>
+
+
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img { 
+  max-width:100%; 
+  height: auto; 
+}
+
+
+<div>
+
+
+<div id="header">
+<h1>
+<a id="wearable-device-prediction-assignment" class="anchor" href="#wearable-device-prediction-assignment" aria-hidden="true"><span class="octicon octicon-link"></span></a>Wearable Device Prediction Assignment</h1>
+<h4>
+<a id="sunday-november-15-2015" class="anchor" href="#sunday-november-15-2015" aria-hidden="true"><span class="octicon octicon-link"></span></a><em>Sunday, November 15, 2015</em>
+</h4>
+</div>
+
+<p>Synopsis: In this report, we aim to develop a model to predict how well subjects performed a bicep curl using data collected from wearable devices. The data from the Human Activity Recognition (HAR) dataset was collected from accelerometers on the belt, forearm, arm, and dumbell of 6 participants who were asked to perform barbell lifts correctly and incorrectly in 5 different ways. We developed a model using the Random Forest machine learning algorithm and used cross-validation to estimate the out-of-sample error.</p>
+
+<div id="data-load-and-processing">
+<h3>
+<a id="data-load-and-processing" class="anchor" href="#data-load-and-processing" aria-hidden="true"><span class="octicon octicon-link"></span></a>Data load and processing</h3>
+<pre><code>library(caret)</code></pre>
+<pre><code>## Loading required package: lattice
+## Loading required package: ggplot2</code></pre>
+<pre><code>#Load the data
+train &lt;- read.csv("wearable-training.csv")
+dim(train)</code></pre>
+<pre><code>## [1] 19622   160</code></pre>
+<p>First, variables with mostly NA were removed.</p>
+<pre><code>notRaw &lt;- apply(!is.na(train), 2, sum)&gt;600
+notRaw &lt;- as.vector(notRaw)
+names &lt;- names(train)
+names &lt;- names[notRaw]
+train &lt;- train[,notRaw]
+names(train) &lt;- names</code></pre>
+<p>Predictors with undefined values were also removed.</p>
+<pre><code>for(x in 1:ncol(train)){
+        train[train[,x] %in% '#DIV/0!',x] &lt;- NA
+}
+train &lt;- train[, colSums(is.na(train)) == 0]
+
+#Remove time variables
+train &lt;- train[,c(6:60)]</code></pre>
+<p>Finally, before training the model the data was split into a training and testing set for cross-validation</p>
+<pre><code>inTrain &lt;- createDataPartition(y=train$classe,p=0.7, list=FALSE)
+training &lt;- train[inTrain,]
+testing &lt;- train[-inTrain,]</code></pre>
+</div>
+
+<div id="train-model-using-classe-as-outcome">
+<h3>
+<a id="train-model-using-classe-as-outcome" class="anchor" href="#train-model-using-classe-as-outcome" aria-hidden="true"><span class="octicon octicon-link"></span></a>Train model using classe as outcome</h3>
+<p>The model was trained using Random Forests to predict the classe outcome using all other variables as predictors.In Random Forests, cross-validation is used internally in the model to estimate out-of-bag (OOB) error. In the model, I selected k-fold for the method of cross-validation with 5 folds.</p>
+<pre><code>modFit &lt;- train(classe ~ .,data=training,method="rf",trControl=trainControl(method="cv",number=5), prox=TRUE)</code></pre>
+<pre><code>## Loading required package: randomForest
+## randomForest 4.6-12
+## Type rfNews() to see new features/changes/bug fixes.</code></pre>
+<pre><code>modFit</code></pre>
+<pre><code>## Random Forest 
+## 
+## 13737 samples
+##    54 predictor
+##     5 classes: 'A', 'B', 'C', 'D', 'E' 
+## 
+## No pre-processing
+## Resampling: Cross-Validated (5 fold) 
+## Summary of sample sizes: 10990, 10991, 10989, 10989, 10989 
+## Resampling results across tuning parameters:
+## 
+##   mtry  Accuracy   Kappa      Accuracy SD  Kappa SD   
+##    2    0.9933021  0.9915264  0.003129083  0.003959703
+##   28    0.9966511  0.9957640  0.001043588  0.001320219
+##   54    0.9937393  0.9920807  0.001533123  0.001940226
+## 
+## Accuracy was used to select the optimal model using  the largest value.
+## The final value used for the model was mtry = 28.</code></pre>
+<pre><code>print(modFit$finalModel)</code></pre>
+<pre><code>## 
+## Call:
+##  randomForest(x = x, y = y, mtry = param$mtry, proximity = TRUE) 
+##                Type of random forest: classification
+##                      Number of trees: 500
+## No. of variables tried at each split: 28
+## 
+##         OOB estimate of  error rate: 0.25%
+## Confusion matrix:
+##      A    B    C    D    E  class.error
+## A 3905    0    0    0    1 0.0002560164
+## B    4 2648    6    0    0 0.0037622272
+## C    0    4 2391    1    0 0.0020868114
+## D    0    0   11 2240    1 0.0053285968
+## E    0    1    0    5 2519 0.0023762376</code></pre>
+<p>As you can see, the final model sampled 28 variables at each node and used 500 trees per random forest.</p>
+</div>
+
+<div id="estimate-the-out-of-sample-error-using-cross-validation">
+<h3>
+<a id="estimate-the-out-of-sample-error-using-cross-validation" class="anchor" href="#estimate-the-out-of-sample-error-using-cross-validation" aria-hidden="true"><span class="octicon octicon-link"></span></a>Estimate the out-of-sample error using cross-validation</h3>
+<p>Cross-validation was used to create a separate testing dataset. This dataset was not used at all in training the model, therefore it will give us a better estimate of out-of-sample error.</p>
+<p>We apply the test set to the Random Forest model to get the predictions.</p>
+<pre><code>pred &lt;- predict(modFit,testing)
+pred</code></pre>
+<pre><code>##    [1] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+##   [35] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+##   [69] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+##  [103] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+##  [137] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+##  [171] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+##  [205] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+##  [239] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+##  [273] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+##  [307] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+##  [341] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+##  [375] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+##  [409] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+##  [443] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+##  [477] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+##  [511] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+##  [545] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+##  [579] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+##  [613] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+##  [647] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+##  [681] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+##  [715] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+##  [749] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+##  [783] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+##  [817] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+##  [851] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+##  [885] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+##  [919] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+##  [953] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+##  [987] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+## [1021] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+## [1055] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+## [1089] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+## [1123] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+## [1157] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+## [1191] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+## [1225] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+## [1259] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+## [1293] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+## [1327] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+## [1361] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+## [1395] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+## [1429] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+## [1463] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+## [1497] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+## [1531] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+## [1565] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+## [1599] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+## [1633] A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A
+## [1667] A A A A A A A A A B B B B B B B B B B B B B B B B B B B B B B B B B
+## [1701] B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B
+## [1735] B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B
+## [1769] B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B
+## [1803] B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B
+## [1837] B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B
+## [1871] B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B
+## [1905] B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B A A A
+## [1939] B B B B B B B B B B B B B A B B B B B B B B B B B B B B B B B B B B
+## [1973] B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B
+## [2007] B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B
+## [2041] B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B
+## [2075] B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B
+## [2109] B B B B B B B C C B B B B B B B B B B B B B B B B B B B B B B B B B
+## [2143] B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B
+## [2177] B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B
+## [2211] B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B
+## [2245] B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B
+## [2279] B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B
+## [2313] B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B
+## [2347] B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B
+## [2381] B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B
+## [2415] B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B
+## [2449] B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B
+## [2483] B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B
+## [2517] B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B
+## [2551] B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B
+## [2585] B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B
+## [2619] B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B
+## [2653] B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B
+## [2687] B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B
+## [2721] B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B
+## [2755] B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B B
+## [2789] B B B B B B B B B B B B B B B B B B B B B B B B B C C C C C C C C C
+## [2823] C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C
+## [2857] C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C
+## [2891] C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C
+## [2925] C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C
+## [2959] C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C
+## [2993] C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C
+## [3027] C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C
+## [3061] C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C
+## [3095] C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C
+## [3129] C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C
+## [3163] C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C
+## [3197] C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C
+## [3231] C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C
+## [3265] C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C
+## [3299] C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C
+## [3333] C C C C C C C C C C C C C C C C C C C C C B C C C C C C C C C C C C
+## [3367] C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C
+## [3401] C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C
+## [3435] C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C
+## [3469] C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C
+## [3503] C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C
+## [3537] C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C
+## [3571] C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C
+## [3605] C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C
+## [3639] C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C
+## [3673] C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C
+## [3707] C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C
+## [3741] C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C
+## [3775] C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C
+## [3809] C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C C D D D
+## [3843] D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D
+## [3877] D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D
+## [3911] D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D
+## [3945] D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D
+## [3979] D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D
+## [4013] D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D
+## [4047] D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D
+## [4081] D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D
+## [4115] D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D
+## [4149] D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D
+## [4183] D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D
+## [4217] D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D
+## [4251] D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D
+## [4285] D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D
+## [4319] C D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D
+## [4353] D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D
+## [4387] D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D
+## [4421] D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D
+## [4455] D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D
+## [4489] D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D
+## [4523] D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D
+## [4557] D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D
+## [4591] D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D
+## [4625] D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D
+## [4659] D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D
+## [4693] D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D
+## [4727] D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D
+## [4761] D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D D
+## [4795] D D D D D D D D D E E E E E E E E E E E E E E E E E E E E E E E E E
+## [4829] E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E
+## [4863] E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E
+## [4897] E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E
+## [4931] E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E
+## [4965] E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E
+## [4999] E E E E E E E E E E E E E E E E E D E E E E E E E E E E E E E E E E
+## [5033] E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E
+## [5067] E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E
+## [5101] E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E
+## [5135] E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E
+## [5169] E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E
+## [5203] E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E
+## [5237] E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E
+## [5271] E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E
+## [5305] E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E
+## [5339] E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E
+## [5373] E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E
+## [5407] E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E
+## [5441] E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E
+## [5475] E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E
+## [5509] E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E
+## [5543] E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E
+## [5577] E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E
+## [5611] E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E
+## [5645] E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E
+## [5679] E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E
+## [5713] E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E
+## [5747] E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E
+## [5781] E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E
+## [5815] E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E
+## [5849] E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E E
+## [5883] E E E
+## Levels: A B C D E</code></pre>
+<p>Finally, we compare the predicted classe for the testing data to the actual values.</p>
+<pre><code>table(pred,testing$classe)</code></pre>
+<pre><code>##     
+## pred    A    B    C    D    E
+##    A 1674    5    0    0    0
+##    B    0 1132    1    0    0
+##    C    0    2 1025    1    0
+##    D    0    0    0  963    1
+##    E    0    0    0    0 1081</code></pre>
+<pre><code>OOSaccuracy &lt;- sum(pred == testing$classe)/length(pred)
+OOSaccuracy</code></pre>
+<pre><code>## [1] 0.9983008</code></pre>
+<pre><code>#Out-of-sample error
+OOSerror &lt;- 1 - OOSaccuracy
+OOSerror</code></pre>
+<pre><code>## [1] 0.001699235</code></pre>
+<p>The Random Forest model has an estimated an out-of-sample error rate of 0.1699%.</p>
+</div>
+
+<p></p>
+</div>
+
+
+
+
+
+
+
+<p>
+</p>
+
+      <footer class="site-footer">
+        <span class="site-footer-owner"><a href="https://github.com/mlhedberg/MachineLearning">Machinelearning</a> is maintained by <a href="https://github.com/mlhedberg">mlhedberg</a>.</span>
+
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
+      </footer>
+
+    </section>
+
+  
+  </body>
+</html>
