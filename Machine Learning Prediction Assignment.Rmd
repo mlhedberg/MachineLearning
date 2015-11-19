@@ -1,0 +1,82 @@
+---
+title: "Wearable Device Prediction Assignment"
+date: "Sunday, November 15, 2015"
+output: html_document
+---
+
+Synopsis: In this report, we aim to develop a model to predict how well subjects performed a bicep curl using data collected from wearable devices. The data from the Human Activity Recognition (HAR) dataset was collected from accelerometers on the belt, forearm, arm, and dumbell of 6 participants who were asked to perform barbell lifts correctly and incorrectly in 5 different ways. We developed a model using the Random Forest machine learning algorithm and used cross-validation to estimate the out-of-sample error.
+
+###Data load and processing 
+```{r} 
+library(caret)
+#Load the data
+train <- read.csv("wearable-training.csv")
+dim(train)
+```
+
+First, variables with mostly NA were removed.
+```{r}
+notRaw <- apply(!is.na(train), 2, sum)>600
+notRaw <- as.vector(notRaw)
+names <- names(train)
+names <- names[notRaw]
+train <- train[,notRaw]
+names(train) <- names
+```
+
+Predictors with undefined values were also removed.
+```{r}
+for(x in 1:ncol(train)){
+        train[train[,x] %in% '#DIV/0!',x] <- NA
+}
+train <- train[, colSums(is.na(train)) == 0]
+
+#Remove time variables
+train <- train[,c(6:60)]
+```
+
+Finally, before training the model the data was split into a training and testing set for cross-validation
+```{r}
+inTrain <- createDataPartition(y=train$classe,p=0.7, list=FALSE)
+training <- train[inTrain,]
+testing <- train[-inTrain,]
+```
+
+###Train model using classe as outcome
+The model was trained using Random Forests to predict the classe outcome using all other variables as predictors.In Random Forests, cross-validation is used internally in the model to estimate out-of-bag (OOB) error. In the model, I selected k-fold for the method of cross-validation with 5 folds.
+```{r}
+modFit <- train(classe ~ .,data=training,method="rf",trControl=trainControl(method="cv",number=5), prox=TRUE)
+modFit
+```
+
+```{r}
+print(modFit$finalModel)
+```
+
+As you can see, the final model sampled 28 variables at each node and used 500 trees per random forest.
+
+###Estimate the out-of-sample error using cross-validation
+Cross-validation was used to create a separate testing dataset. This dataset was not used at all in training the model, therefore it will give us a better estimate of out-of-sample error. 
+
+We apply the test set to the Random Forest model to get the predictions.
+```{r}
+pred <- predict(modFit,testing)
+pred
+```
+
+Finally, we compare the predicted classe for the testing data to the actual values.
+```{r}
+table(pred,testing$classe)
+OOSaccuracy <- sum(pred == testing$classe)/length(pred)
+OOSaccuracy
+
+#Out-of-sample error
+OOSerror <- 1 - OOSaccuracy
+OOSerror
+```
+
+```{r, echo=FALSE}
+e <- round(OOSerror*100, 4)
+```
+
+The Random Forest model has an estimated an out-of-sample error rate of `r e`%.
